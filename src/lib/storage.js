@@ -1,0 +1,40 @@
+
+export const storage = {
+  get: (key, defaultValue = null) => {
+    try {
+      const item = localStorage.getItem(key);
+      if (item === 'undefined' || item === 'null') {
+        return defaultValue;
+      }
+      return item ? JSON.parse(item) : defaultValue;
+    } catch (error) {
+      console.error(`Error getting ${key} from localStorage:`, error);
+      return defaultValue;
+    }
+  },
+  
+  set: (key, value) => {
+    try {
+      const stringValue = JSON.stringify(value);
+      localStorage.setItem(key, stringValue);
+    } catch (error) {
+      console.error(`Error setting ${key} to localStorage:`, error);
+    }
+  },
+  
+  remove: (key) => {
+    try {
+      localStorage.removeItem(key);
+    } catch (error) {
+      console.error(`Error removing ${key} from localStorage:`, error);
+    }
+  },
+  
+  clear: () => {
+    try {
+      localStorage.clear();
+    } catch (error) {
+      console.error('Error clearing localStorage:', error);
+    }
+  }
+};
