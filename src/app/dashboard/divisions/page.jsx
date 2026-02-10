@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import axios from '@/lib/axios';
+import Pagination from '@/components/Pagination';
 import DivisionModal from './components/DivisionModal';
 
 export default function DivisionsPage() {
@@ -10,18 +12,32 @@ export default function DivisionsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDivision, setSelectedDivision] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [totalPages, setTotalPages] = useState(0);
+  
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  
+  const currentPage = parseInt(searchParams.get('page') || '1');
+  const perPage = 10;
 
   const fetchDivisions = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/divisions');
+      const params = new URLSearchParams({
+        page: currentPage,
+        per_page: perPage,
+        ...(searchTerm && { name: searchTerm }),
+      });
+
+      const response = await axios.get(`/divisions?${params}`);
       setDivisions(response.data.data.divisions || []);
+      setTotalPages(Math.ceil((response.data.pagination?.total || 0) / perPage));
     } catch (error) {
       console.error('Failed to fetch divisions:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentPage, searchTerm]);
 
   useEffect(() => {
     fetchDivisions();
@@ -29,7 +45,14 @@ export default function DivisionsPage() {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    // Filter divisions berdasarkan search term
+    const params = new URLSearchParams(searchParams);
+    params.set('page', '1');
+    if (searchTerm) {
+      params.set('search', searchTerm);
+    } else {
+      params.delete('search');
+    }
+    router.push(`?${params.toString()}`);
   };
 
   const handleEdit = (division) => {
@@ -58,10 +81,6 @@ export default function DivisionsPage() {
     handleModalClose();
     fetchDivisions();
   };
-
-  const filteredDivisions = divisions.filter((division) =>
-    division.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <div className="space-y-6">
@@ -105,7 +124,7 @@ export default function DivisionsPage() {
           <div className="flex justify-center py-16">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-500"></div>
           </div>
-        ) : filteredDivisions.length === 0 ? (
+        ) : divisions.length === 0 ? (
           <div className="text-center py-16 text-neutral-500 dark:text-neutral-400">
             <div className="text-4xl mb-2">📭</div>
             <p className="font-medium">Belum ada disivi</p>
@@ -127,7 +146,7 @@ export default function DivisionsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-neutral-800 divide-y divide-neutral-200 dark:divide-neutral-700">
-                {filteredDivisions.map((division) => (
+                {divisions.map((division) => (
                   <tr key={division.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-700/50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-neutral-900 dark:text-neutral-50">
                       {division.name}
@@ -160,6 +179,8 @@ export default function DivisionsPage() {
           </div>
         )}
       </div>
+
+      <Pagination currentPage={currentPage} totalPages={totalPages} />
 
       {/* Modal */}
       {modalOpen && (
